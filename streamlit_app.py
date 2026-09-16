@@ -22,7 +22,7 @@ st.bar_chart(df.groupby("Category", as_index=False).sum(), x="Category", y="Sale
 df["Order_Date"] = pd.to_datetime(df["Order_Date"])
 df.set_index('Order_Date', inplace=True)
 # Here the Grouper is using our newly set index to group by Month ('M')
-sales_by_month = df.filter(items=['Sales']).groupby(pd.Grouper(freq='M')).sum()
+sales_by_month = df.filter(items=['Sales']).groupby(pd.Grouper(freq='ME')).sum()
 
 st.dataframe(sales_by_month)
 
@@ -31,7 +31,25 @@ st.line_chart(sales_by_month, y="Sales")
 
 st.write("## Your additions")
 st.write("### (1) add a drop down for Category (https://docs.streamlit.io/library/api-reference/widgets/st.selectbox)")
+category = st.selectbox("Select Category:", pd.unique(df["Category"]))
 st.write("### (2) add a multi-select for Sub_Category *in the selected Category (1)* (https://docs.streamlit.io/library/api-reference/widgets/st.multiselect)")
+sub_categories = st.multiselect("Select Sub-Categories:", pd.unique(df[df["Category"] == category]["Sub_Category"]))
 st.write("### (3) show a line chart of sales for the selected items in (2)")
+if sub_categories:
+# Here the Grouper is using our newly set index to group by Month ('M')
+    sales_by_month = df[df["Sub_Category"].isin(sub_categories)].filter(items=['Sales']).groupby(pd.Grouper(freq='ME')).sum()
+    st.line_chart(sales_by_month, y="Sales")
+
 st.write("### (4) show three metrics (https://docs.streamlit.io/library/api-reference/data/st.metric) for the selected items in (2): total sales, total profit, and overall profit margin (%)")
+if sub_categories:
+    total_sales = df[df["Sub_Category"].isin(sub_categories)]["Sales"].sum()
+    total_profit = df[df["Sub_Category"].isin(sub_categories)]["Profit"].sum()
+    profit_margin = (total_profit / total_sales) * 100
+    overall_sales = df["Sales"].sum()
+    overall_profit = df["Profit"].sum()
+    overall_profit_margin = (overall_profit / overall_sales) * 100
+    difference = profit_margin - overall_profit_margin
+    st.metric(f"Total Sales for {sub_categories}", f"${total_sales:.2f}")
+    st.metric(f"Total Profit for {sub_categories}", f"${total_profit:.2f}")
+    st.metric(f"Overall Profit Margin for {sub_categories}", f"{profit_margin:.2f}%", delta=f"{difference:.2f}%")
 st.write("### (5) use the delta option in the overall profit margin metric to show the difference between the overall average profit margin (all products across all categories)")
